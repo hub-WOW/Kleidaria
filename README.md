@@ -11,6 +11,7 @@ The name **Kleidaria** comes from the Greek word *κλειδαριά*, meaning *
 
 - Argon2id password-based key derivation
 - AES‑256‑GCM authenticated encryption
+- Ed25519 asymmetric key pair generation, signing, and verification
 - Secure random key and nonce generation
 - Base64 URL-safe encoding helpers
 - Simple object-oriented API
@@ -37,7 +38,7 @@ byte[] masterKey = crypto.deriveMasterKey(
 );
 ```
 
-### Encrypting data
+### Encrypting data (AES-256-GCM)
 
 ```java
 byte[] key = crypto.generateEncryptionKey();
@@ -50,7 +51,7 @@ byte[] ciphertext = crypto.encrypt(
 );
 ```
 
-### Decrypting data
+### Decrypting data (AES-256-GCM)
 
 ```java
 byte[] plaintext = crypto.decrypt(
@@ -58,6 +59,74 @@ byte[] plaintext = crypto.decrypt(
     nonce,
     ciphertext
 );
+```
+
+---
+
+## Ed25519 Asymmetric Cryptography
+
+Ed25519 provides fast, secure asymmetric signing and verification. In Kleidaria the operation is exposed through `encryptEd25519` (sign) and `decryptEd25519` (verify).
+
+The methods are overloaded to accept either raw **byte arrays** or **Base64 URL-safe strings**.
+
+### Generating a key pair
+
+```java
+import java.util.HashMap;
+
+HashMap<String, byte[]> keyPair = crypto.generateEd25519KeyPair();
+
+byte[] publicKey  = keyPair.get("publicKey");
+byte[] privateKey = keyPair.get("privateKey");
+
+// Convert to strings if needed
+String pubBase64  = CryptoUtil.toBase64Url(publicKey);
+String privBase64 = CryptoUtil.toBase64Url(privateKey);
+```
+
+### Signing a message (`encryptEd25519`)
+
+You can sign using either the `byte[]` or the `String` formatted private key:
+
+```java
+byte[] message = "hello world".getBytes();
+
+// Option A: Raw bytes
+byte[] sig1 = crypto.encryptEd25519(privateKey, message);
+
+// Option B: Base64 URL string
+byte[] sig2 = crypto.encryptEd25519(privBase64, message);
+```
+
+### Verifying a signature (`decryptEd25519`)
+
+Similarly, verification supports both formats:
+
+```java
+// Option A: Raw bytes
+boolean ok1 = crypto.decryptEd25519(publicKey, message, sig1);
+
+// Option B: Base64 URL string
+boolean ok2 = crypto.decryptEd25519(pubBase64, message, sig2);
+```
+
+### Full round-trip example
+
+```java
+CryptoUtil crypto = new CryptoUtil();
+
+// 1. Generate
+HashMap<String, byte[]> kp = crypto.generateEd25519KeyPair();
+String privStr = CryptoUtil.toBase64Url(kp.get("privateKey"));
+String pubStr  = CryptoUtil.toBase64Url(kp.get("publicKey"));
+
+// 2. Sign (using string)
+byte[] msg = "kleidaria".getBytes();
+byte[] sig = crypto.encryptEd25519(privStr, msg);
+
+// 3. Verify (using string)
+boolean ok = crypto.decryptEd25519(pubStr, msg, sig);
+System.out.println("Valid: " + ok); // true
 ```
 
 ---
