@@ -1,4 +1,5 @@
 package wow.kleidaria;
+
 //AES-GCM encryption
 import javax.crypto.Cipher;
 import javax.crypto.spec.GCMParameterSpec;
@@ -8,10 +9,20 @@ import javax.crypto.spec.SecretKeySpec;
 import org.bouncycastle.crypto.generators.Argon2BytesGenerator;
 import org.bouncycastle.crypto.params.Argon2Parameters;
 
+// Ed25519
+import java.security.KeyFactory;
+import java.security.KeyPair;
+import java.security.KeyPairGenerator;
+import java.security.PrivateKey;
+import java.security.PublicKey;
+import java.security.Signature;
+import java.security.spec.PKCS8EncodedKeySpec;
+import java.security.spec.X509EncodedKeySpec;
+import java.util.HashMap;
+
 // RNG and String Manipulation
 import java.security.SecureRandom;
 import java.util.Base64;
-
 
 // Lombok
 import lombok.Getter;
@@ -27,18 +38,17 @@ public class CryptoUtil {
     private static final int GCM_TAG_BITS = 128;
 
     // --- Instance config ---
-    private int argon2Iterations ; 
-    private int argon2Memory ; 
-    private int argon2Parallelism ; 
+    private int argon2Iterations;
+    private int argon2Memory;
+    private int argon2Parallelism;
 
-
-    private int masterSaltBytes ; 
-    private int nonceBytes ; 
+    private int masterSaltBytes;
+    private int nonceBytes;
     private int encryptionSaltBytes;
     private int encryptionKeyBytes;
     private int IdBytes;
 
-    public void resetConfig(){
+    public void resetConfig() {
         this.argon2Iterations = 1000_000;
         this.argon2Memory = 65536;
         this.argon2Parallelism = 4;
@@ -49,11 +59,10 @@ public class CryptoUtil {
         this.encryptionKeyBytes = 32;
 
         this.nonceBytes = 12;
-        
+
         this.IdBytes = 16;
     }
 
-    
     public CryptoUtil() {
         resetConfig();
     }
@@ -101,6 +110,56 @@ public class CryptoUtil {
         } catch (Exception e) {
             throw new RuntimeException("Argon2 key derivation failed", e);
         }
+    }
+
+    public HashMap<String, byte[]> generateEd25519KeyPair() {
+        try {
+            KeyPairGenerator kpg = KeyPairGenerator.getInstance("Ed25519");
+            KeyPair kp = kpg.generateKeyPair();
+
+            HashMap<String, byte[]> keys = new HashMap<>();
+            keys.put("publicKey", kp.getPublic().getEncoded());
+            keys.put("privateKey", kp.getPrivate().getEncoded());
+            return keys;
+        } catch (Exception e) {
+            throw new RuntimeException("Ed25519 key generation failed", e);
+        }
+    }
+
+    public byte[] encryptEd25519(byte[] encodedPrivateKey, byte[] message) {
+        try {
+            KeyFactory kf = KeyFactory.getInstance("Ed25519");
+            PrivateKey privateKey = kf.generatePrivate(new PKCS8EncodedKeySpec(encodedPrivateKey));
+
+            Signature sig = Signature.getInstance("Ed25519");
+            sig.initSign(privateKey);
+            sig.update(message);
+            return sig.sign();
+        } catch (Exception e) {
+            throw new RuntimeException("Ed25519 signing failed", e);
+        }
+    }
+
+    public byte[] encryptEd25519(String base64PrivateKey, byte[] message) {
+        return encryptEd25519(fromBase64Url(base64PrivateKey), message);
+    }
+
+    public boolean decryptEd25519(byte[] encodedPublicKey, byte[] message, byte[] signature) {
+        try {
+            KeyFactory kf = KeyFactory.getInstance("Ed25519");
+            PublicKey publicKey = kf.generatePublic(new X509EncodedKeySpec(encodedPublicKey));
+
+            Signature sig = Signature.getInstance("Ed25519");
+            sig.initVerify(publicKey);
+            sig.update(message);
+            return sig.verify(signature);
+        } catch (Exception e) {
+            throw new RuntimeException("Ed25519 verification failed", e);
+        }
+    }
+
+    public boolean decryptEd25519(String base64PublicKey, byte[] message, byte[] signature) {
+        return decryptEd25519(fromBase64Url(base64PublicKey), message, signature);
     }
 
     // -------------------------------------------------------------------------
