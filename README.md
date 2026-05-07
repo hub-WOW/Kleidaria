@@ -1,4 +1,4 @@
-# drypto
+# crypto
 
 **crypto** is a lightweight cryptography utility library written in Java.  
 It provides secure primitives for password-based key derivation and authenticated encryption using modern algorithms.
