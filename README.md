@@ -1,9 +1,7 @@
-# Kleidaria
+# drypto
 
-**Kleidaria** is a lightweight cryptography utility library written in Java.  
+**crypto** is a lightweight cryptography utility library written in Java.  
 It provides secure primitives for password-based key derivation and authenticated encryption using modern algorithms.
-
-The name **Kleidaria** comes from the Greek word *κλειδαριά*, meaning **“lock.”**
 
 ---
 
